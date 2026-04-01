@@ -16,6 +16,7 @@ import cv2
 from app.core.exceptions import AppException
 from app.core.logger import logger
 from app.schemas.segment import SegmentVideoData, SegmentVideoRealtimeSummaryData
+from app.services.history_service import inference_history_service
 from app.services.inference_service import inference_service
 from app.services.model_registry import ModelConfig
 
@@ -23,6 +24,7 @@ from app.services.model_registry import ModelConfig
 @dataclass
 class VideoRealtimeTask:
     task_id: str
+    user_id: int
     model: ModelConfig
     input_size: tuple[int, int]
     original_video_url: str
@@ -47,6 +49,7 @@ class VideoRealtimeService:
 
     def create_task(
         self,
+        user_id: int,
         model: ModelConfig,
         input_size: tuple[int, int],
         original_video_url: str,
@@ -57,6 +60,7 @@ class VideoRealtimeService:
         task_id = uuid.uuid4().hex
         task = VideoRealtimeTask(
             task_id=task_id,
+            user_id=user_id,
             model=model,
             input_size=input_size,
             original_video_url=original_video_url,
@@ -130,6 +134,13 @@ class VideoRealtimeService:
         except RuntimeError:
             return
 
+    @staticmethod
+    def _safe_update_history(task_id: str, **updates: Any) -> None:
+        try:
+            inference_history_service.update_task_history(task_id=task_id, **updates)
+        except Exception as ex:
+            logger.warning("history update failed task_id=%s error=%s", task_id, str(ex))
+
     def start_task(self, task_id: str, loop: asyncio.AbstractEventLoop) -> None:
         task = self.get_task(task_id)
         if task is None:
@@ -160,6 +171,8 @@ class VideoRealtimeService:
         if task is None:
             raise AppException("任务不存在", status_code=HTTPStatus.NOT_FOUND)
 
+        self._safe_update_history(task_id, finalize_status="queued", status_message=None)
+
         thread = Thread(target=self._run_finalize_sync, args=(task_id, loop), daemon=True)
         thread.start()
         return task
@@ -168,6 +181,8 @@ class VideoRealtimeService:
         task = self._update_task(task_id, status="running", error_message=None, summary=None)
         if task is None:
             return
+
+        self._safe_update_history(task_id, realtime_status="running", status_message=None)
 
         try:
             self._broadcast_threadsafe(
@@ -291,6 +306,16 @@ class VideoRealtimeService:
             if task is None:
                 return
 
+            self._safe_update_history(
+                task_id,
+                realtime_status="completed",
+                finalize_status=task.finalize_status,
+                avg_fps=float(summary.avg_fps),
+                realtime_fps=float(summary.realtime_fps),
+                inference_time=float(summary.inference_time),
+                status_message=None,
+            )
+
             self._broadcast_threadsafe(
                 loop,
                 task_id,
@@ -305,6 +330,11 @@ class VideoRealtimeService:
         except Exception as ex:
             task = self._update_task(task_id, status="failed", error_message=str(ex))
             logger.error("实时视频任务失败 task_id=%s error=%s", task_id, str(ex))
+            self._safe_update_history(
+                task_id,
+                realtime_status="failed",
+                status_message=str(ex),
+            )
             self._broadcast_threadsafe(
                 loop,
                 task_id,
@@ -324,6 +354,8 @@ class VideoRealtimeService:
         )
         if task is None:
             return
+
+        self._safe_update_history(task_id, finalize_status="running", status_message=None)
 
         self._broadcast_threadsafe(
             loop,
@@ -363,6 +395,17 @@ class VideoRealtimeService:
                 task.result.realtime_fps if task.result else 0.0,
             )
 
+            self._safe_update_history(
+                task_id,
+                finalize_status="completed",
+                segmented_url=task.result.segmented_video_url if task.result else None,
+                overlay_url=task.result.overlay_video_url if task.result else None,
+                avg_fps=float(task.result.avg_fps) if task.result else None,
+                realtime_fps=float(task.result.realtime_fps) if task.result else None,
+                inference_time=float(task.result.inference_time) if task.result else None,
+                status_message=None,
+            )
+
             self._broadcast_threadsafe(
                 loop,
                 task_id,
@@ -381,6 +424,11 @@ class VideoRealtimeService:
                 finalize_error_message=str(ex),
             )
             logger.error("实时任务最终视频生成失败 task_id=%s error=%s", task_id, str(ex))
+            self._safe_update_history(
+                task_id,
+                finalize_status="failed",
+                status_message=str(ex),
+            )
             self._broadcast_threadsafe(
                 loop,
                 task_id,

@@ -43,8 +43,8 @@
         <el-card shadow="never" class="about-card">
           <template #header>后端与联调说明</template>
           <p>
-            后端计划采用 FastAPI，接口包括 `/api/segment`、`/api/segment/video` 与 `/api/model/info`。
-            当前前端已预留统一请求层与返回结构处理，在后端接口就绪后可直接联调。
+            后端已基于 FastAPI 完成登录鉴权、分割推理与历史记录落库。前端当前已接入
+            `/api/auth/*`、`/api/history/*`、`/api/segment/*` 全链路接口，并支持 JWT 过期自动回登录页。
           </p>
         </el-card>
       </el-col>

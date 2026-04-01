@@ -122,6 +122,7 @@ import {
 import { useSegmentStore } from '../stores/segment'
 import { useSystemStore } from '../stores/system'
 import { resolveAssetUrl } from '../utils/format'
+import { getAccessToken } from '../utils/auth'
 
 const systemStore = useSystemStore()
 const segmentStore = useSegmentStore()
@@ -369,13 +370,22 @@ const startFinalizeFlow = async (taskId: string) => {
 }
 
 const buildWsUrl = (wsPath: string) => {
+  const withToken = (url: string) => {
+    const token = getAccessToken()
+    if (!token || /[?&]token=/.test(url)) {
+      return url
+    }
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}token=${encodeURIComponent(token)}`
+  }
+
   if (wsPath.startsWith('ws://') || wsPath.startsWith('wss://')) {
-    return wsPath
+    return withToken(wsPath)
   }
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const normalizedPath = wsPath.startsWith('/') ? wsPath : `/${wsPath}`
-  return `${protocol}//${window.location.host}${normalizedPath}`
+  return withToken(`${protocol}//${window.location.host}${normalizedPath}`)
 }
 
 const handleVideoRealtimeEvent = async (eventData: VideoRealtimeEvent) => {

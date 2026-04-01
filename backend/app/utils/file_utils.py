@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import re
 import time
 import uuid
 from http import HTTPStatus
@@ -10,15 +11,23 @@ from fastapi import UploadFile
 from app.core.config import settings
 from app.core.exceptions import AppException
 
+_PREFIX_PATTERN = re.compile(r"[^a-zA-Z0-9_-]+")
+
 
 def ensure_dirs(*paths: Path) -> None:
     for path in paths:
         path.mkdir(parents=True, exist_ok=True)
 
 
-def build_unique_filename(original_name: str) -> str:
+def build_unique_filename(original_name: str, prefix: str | None = None) -> str:
     suffix = Path(original_name).suffix.lower()
-    return f"{uuid.uuid4().hex}_{int(time.time() * 1000)}{suffix}"
+    base = f"{uuid.uuid4().hex}_{int(time.time() * 1000)}{suffix}"
+    if not prefix:
+        return base
+    safe_prefix = _PREFIX_PATTERN.sub("_", prefix).strip("_")
+    if not safe_prefix:
+        return base
+    return f"{safe_prefix}_{base}"
 
 
 def validate_upload_file(file: UploadFile, file_type: str) -> None:
