@@ -4,8 +4,9 @@ import asyncio
 import time
 from http import HTTPStatus
 
-from fastapi import APIRouter, File, Form, Request, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, WebSocket, WebSocketDisconnect
 
+from app.api.deps import CurrentUser, get_current_user, parse_user_from_token
 from app.core.config import UPLOAD_DIR, settings
 from app.core.exceptions import AppException
 from app.core.logger import logger
@@ -19,6 +20,7 @@ from app.schemas.segment import (
     SegmentVideoRealtimeInitData,
     SegmentVideoResultData,
 )
+from app.services.history_service import inference_history_service
 from app.services.inference_service import inference_service
 from app.services.model_registry import get_model_config
 from app.services.resolution_service import (
@@ -49,6 +51,7 @@ async def segment_image(
     file: UploadFile = File(...),
     model_key: str = Form(default=settings.default_model_key),
     resolution: str | None = Form(default=None),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> ApiResponse[SegmentImageData]:
     request_id = getattr(request.state, "request_id", "-")
     t0 = time.perf_counter()
@@ -60,7 +63,7 @@ async def segment_image(
     model = get_model_config(model_key)
     selected_input_size = parse_resolution_or_default(resolution, model.input_size)
 
-    upload_filename = build_unique_filename(file.filename)
+    upload_filename = build_unique_filename(file.filename, prefix=f"u{current_user['id']}_img")
     upload_path = UPLOAD_DIR / upload_filename
     await save_upload_file(file, upload_path)
 
@@ -77,9 +80,22 @@ async def segment_image(
         input_size=selected_input_size,
     )
 
+    inference_history_service.create_image_history(
+        user_id=int(current_user["id"]),
+        model_key=model.model_key,
+        model_name=model.model_name,
+        resolution=f"{selected_input_size[0]}x{selected_input_size[1]}",
+        original_url=result.original_image_url,
+        segmented_url=result.segmented_image_url,
+        overlay_url=result.overlay_image_url,
+        inference_time=float(result.inference_time),
+        classes=[item.model_dump() for item in result.classes],
+    )
+
     logger.info(
-        "request_id=%s endpoint=/api/segment model=%s resolution=%s file=%s elapsed=%.3fs",
+        "request_id=%s endpoint=/api/segment user_id=%s model=%s resolution=%s file=%s elapsed=%.3fs",
         request_id,
+        current_user["id"],
         model_key,
         f"{selected_input_size[0]}x{selected_input_size[1]}",
         upload_filename,
@@ -94,6 +110,7 @@ async def segment_video(
     file: UploadFile = File(...),
     model_key: str = Form(default=settings.default_model_key),
     resolution: str | None = Form(default=None),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> ApiResponse[SegmentVideoData]:
     request_id = getattr(request.state, "request_id", "-")
     t0 = time.perf_counter()
@@ -105,7 +122,7 @@ async def segment_video(
     model = get_model_config(model_key)
     selected_input_size = parse_resolution_or_default(resolution, model.input_size)
 
-    upload_filename = build_unique_filename(file.filename)
+    upload_filename = build_unique_filename(file.filename, prefix=f"u{current_user['id']}_video")
     upload_path = UPLOAD_DIR / upload_filename
     await save_upload_file(file, upload_path)
 
@@ -122,9 +139,23 @@ async def segment_video(
         input_size=selected_input_size,
     )
 
+    inference_history_service.create_video_history(
+        user_id=int(current_user["id"]),
+        model_key=model.model_key,
+        model_name=model.model_name,
+        resolution=f"{selected_input_size[0]}x{selected_input_size[1]}",
+        original_url=result.original_video_url,
+        segmented_url=result.segmented_video_url,
+        overlay_url=result.overlay_video_url,
+        avg_fps=float(result.avg_fps),
+        realtime_fps=float(result.realtime_fps),
+        inference_time=float(result.inference_time),
+    )
+
     logger.info(
-        "request_id=%s endpoint=/api/segment/video model=%s resolution=%s file=%s elapsed=%.3fs",
+        "request_id=%s endpoint=/api/segment/video user_id=%s model=%s resolution=%s file=%s elapsed=%.3fs",
         request_id,
+        current_user["id"],
         model_key,
         f"{selected_input_size[0]}x{selected_input_size[1]}",
         upload_filename,
@@ -139,6 +170,7 @@ async def start_video_realtime(
     file: UploadFile = File(...),
     model_key: str = Form(default=settings.default_model_key),
     resolution: str | None = Form(default=None),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> ApiResponse[SegmentVideoRealtimeInitData]:
     request_id = getattr(request.state, "request_id", "-")
     t0 = time.perf_counter()
@@ -150,7 +182,7 @@ async def start_video_realtime(
     model = get_model_config(model_key)
     selected_input_size = parse_resolution_or_default(resolution, model.input_size)
 
-    upload_filename = build_unique_filename(file.filename)
+    upload_filename = build_unique_filename(file.filename, prefix=f"u{current_user['id']}_rt")
     upload_path = UPLOAD_DIR / upload_filename
     await save_upload_file(file, upload_path)
 
@@ -159,12 +191,26 @@ async def start_video_realtime(
 
     original_url = f"{settings.static_url_prefix}/upload/{upload_filename}"
     task = video_realtime_service.create_task(
+        user_id=int(current_user["id"]),
         model=model,
         input_size=selected_input_size,
         original_video_url=original_url,
         original_video_path=upload_path,
         segmented_filename=segmented_filename,
         overlay_filename=overlay_filename,
+    )
+
+    inference_history_service.create_realtime_task_history(
+        user_id=int(current_user["id"]),
+        task_id=task.task_id,
+        model_key=model.model_key,
+        model_name=model.model_name,
+        resolution=f"{selected_input_size[0]}x{selected_input_size[1]}",
+        original_url=task.original_video_url,
+        segmented_url=task.segmented_video_url,
+        overlay_url=task.overlay_video_url,
+        realtime_status=task.status,
+        finalize_status=task.finalize_status,
     )
 
     event_loop = asyncio.get_running_loop()
@@ -183,8 +229,9 @@ async def start_video_realtime(
     )
 
     logger.info(
-        "request_id=%s endpoint=/api/segment/video/realtime model=%s resolution=%s file=%s task_id=%s elapsed=%.3fs",
+        "request_id=%s endpoint=/api/segment/video/realtime user_id=%s model=%s resolution=%s file=%s task_id=%s elapsed=%.3fs",
         request_id,
+        current_user["id"],
         model_key,
         f"{selected_input_size[0]}x{selected_input_size[1]}",
         upload_filename,
@@ -195,9 +242,17 @@ async def start_video_realtime(
 
 
 @router.post("/video/finalize/{task_id}", response_model=ApiResponse[SegmentVideoFinalizeTriggerData])
-async def start_video_finalize(request: Request, task_id: str) -> ApiResponse[SegmentVideoFinalizeTriggerData]:
+async def start_video_finalize(
+    request: Request,
+    task_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> ApiResponse[SegmentVideoFinalizeTriggerData]:
     request_id = getattr(request.state, "request_id", "-")
     t0 = time.perf_counter()
+
+    task = video_realtime_service.get_task(task_id)
+    if task is None or task.user_id != int(current_user["id"]):
+        raise AppException("任务不存在", status_code=HTTPStatus.NOT_FOUND)
 
     event_loop = asyncio.get_running_loop()
     task = video_realtime_service.start_finalize_task(task_id, event_loop)
@@ -216,8 +271,9 @@ async def start_video_finalize(request: Request, task_id: str) -> ApiResponse[Se
     )
 
     logger.info(
-        "request_id=%s endpoint=/api/segment/video/finalize task_id=%s realtime_status=%s finalize_status=%s elapsed=%.3fs",
+        "request_id=%s endpoint=/api/segment/video/finalize user_id=%s task_id=%s realtime_status=%s finalize_status=%s elapsed=%.3fs",
         request_id,
+        current_user["id"],
         task_id,
         task.status,
         task.finalize_status,
@@ -227,17 +283,41 @@ async def start_video_finalize(request: Request, task_id: str) -> ApiResponse[Se
 
 
 @router.get("/video/result/{task_id}", response_model=ApiResponse[SegmentVideoResultData])
-async def get_video_result(request: Request, task_id: str) -> ApiResponse[SegmentVideoResultData]:
+async def get_video_result(
+    request: Request,
+    task_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> ApiResponse[SegmentVideoResultData]:
     request_id = getattr(request.state, "request_id", "-")
     t0 = time.perf_counter()
 
     task = video_realtime_service.get_task(task_id)
-    if task is None:
+    if task is None or task.user_id != int(current_user["id"]):
         raise AppException("任务不存在", status_code=HTTPStatus.NOT_FOUND)
 
     message = task.error_message
     if task.finalize_status == "failed":
         message = task.finalize_error_message
+
+    if task.result is not None:
+        inference_history_service.update_task_history(
+            task_id=task.task_id,
+            realtime_status=task.status,
+            finalize_status=task.finalize_status,
+            segmented_url=task.result.segmented_video_url,
+            overlay_url=task.result.overlay_video_url,
+            avg_fps=float(task.result.avg_fps),
+            realtime_fps=float(task.result.realtime_fps),
+            inference_time=float(task.result.inference_time),
+            status_message=message,
+        )
+    else:
+        inference_history_service.update_task_history(
+            task_id=task.task_id,
+            realtime_status=task.status,
+            finalize_status=task.finalize_status,
+            status_message=message,
+        )
 
     data = SegmentVideoResultData(
         task_id=task.task_id,
@@ -249,8 +329,9 @@ async def get_video_result(request: Request, task_id: str) -> ApiResponse[Segmen
     )
 
     logger.info(
-        "request_id=%s endpoint=/api/segment/video/result task_id=%s realtime_status=%s finalize_status=%s elapsed=%.3fs",
+        "request_id=%s endpoint=/api/segment/video/result user_id=%s task_id=%s realtime_status=%s finalize_status=%s elapsed=%.3fs",
         request_id,
+        current_user["id"],
         task_id,
         task.status,
         task.finalize_status,
@@ -262,6 +343,46 @@ async def get_video_result(request: Request, task_id: str) -> ApiResponse[Segmen
 @router.websocket("/video/ws/{task_id}")
 async def video_realtime_ws(websocket: WebSocket, task_id: str) -> None:
     await websocket.accept()
+
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.send_json(
+            {
+                "type": "task_failed",
+                "task_id": task_id,
+                "status": "failed",
+                "message": "缺少 token",
+            }
+        )
+        await websocket.close(code=1008)
+        return
+
+    try:
+        current_user = parse_user_from_token(token)
+    except AppException as ex:
+        await websocket.send_json(
+            {
+                "type": "task_failed",
+                "task_id": task_id,
+                "status": "failed",
+                "message": ex.message,
+            }
+        )
+        await websocket.close(code=1008)
+        return
+
+    task = video_realtime_service.get_task(task_id)
+    if task is None or task.user_id != int(current_user["id"]):
+        await websocket.send_json(
+            {
+                "type": "task_failed",
+                "task_id": task_id,
+                "status": "failed",
+                "message": "任务不存在",
+            }
+        )
+        await websocket.close(code=1008)
+        return
 
     queue = video_realtime_service.subscribe(task_id)
     if queue is None:
@@ -276,23 +397,22 @@ async def video_realtime_ws(websocket: WebSocket, task_id: str) -> None:
         await websocket.close(code=1008)
         return
 
-    task = video_realtime_service.get_task(task_id)
-    if task is not None:
-        await websocket.send_json(
-            {
-                "type": "task_snapshot",
-                "task_id": task.task_id,
-                "status": task.status,
-                "finalize_status": task.finalize_status,
-                "summary": task.summary.model_dump() if task.summary else None,
-                "result": task.result.model_dump() if task.result else None,
-                "message": task.error_message or task.finalize_error_message,
-            }
-        )
-        if task.status in {"completed", "failed"}:
-            await websocket.close(code=1000)
-            video_realtime_service.unsubscribe(task_id, queue)
-            return
+    await websocket.send_json(
+        {
+            "type": "task_snapshot",
+            "task_id": task.task_id,
+            "status": task.status,
+            "finalize_status": task.finalize_status,
+            "summary": task.summary.model_dump() if task.summary else None,
+            "result": task.result.model_dump() if task.result else None,
+            "message": task.error_message or task.finalize_error_message,
+        }
+    )
+
+    if task.status in {"completed", "failed"}:
+        await websocket.close(code=1000)
+        video_realtime_service.unsubscribe(task_id, queue)
+        return
 
     try:
         while True:

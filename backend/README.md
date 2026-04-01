@@ -427,3 +427,34 @@ backend/
 
 本仓库用于毕业设计演示与研发验证。  
 如需开源发布，建议补充：许可证、贡献指南、隐私与数据处理声明。
+
+---
+
+## 20. 登录与历史记录（2026-04 更新）
+
+后端已新增 MySQL 持久化的用户与历史记录能力：
+
+- 用户注册、登录、JWT 鉴权、当前用户信息、头像上传
+- 图像/视频推理历史自动入库（含 realtime/finalize 状态）
+- 历史分页查询、历史详情、历史删除
+- 推理接口改为登录保护（`/api/segment/resolutions` 保持公开）
+
+数据库默认连接（可用环境变量覆盖）：
+
+- `DB_HOST`（默认 `127.0.0.1`）
+- `DB_PORT`（默认 `3306`）
+- `DB_USER`（默认 `root`）
+- `DB_PASSWORD`（默认 `123456`）
+- `DB_NAME`（默认 `segmentation_system`）
+- `JWT_SECRET_KEY`
+- `JWT_EXPIRE_MINUTES`
+
+初始化数据库：
+
+```bash
+.\.venv\Scripts\python .\scripts\init_mysql_auth.py --host 127.0.0.1 --port 3306 --user root --password 123456
+```
+
+前端联调接口文档见：
+
+- `docs/frontend_api_integration.md`

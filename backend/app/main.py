@@ -2,19 +2,21 @@
 
 import time
 import uuid
-
-import imageio_ffmpeg
 from http import HTTPStatus
 
+import imageio_ffmpeg
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.staticfiles import StaticFiles
 
+from app.api.routers.auth import router as auth_router
+from app.api.routers.admin import router as admin_router
 from app.api.routers.health import router as health_router
+from app.api.routers.history import router as history_router
 from app.api.routers.model import router as model_router
 from app.api.routers.segment import router as segment_router
-from app.core.config import RESULT_DIR, STATIC_DIR, UPLOAD_DIR, settings
+from app.core.config import AVATAR_DIR, RESULT_DIR, STATIC_DIR, UPLOAD_DIR, settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logger import logger
 from app.core.responses import error_response
@@ -26,8 +28,8 @@ app = FastAPI(
     description="自动驾驶图像语义分割系统后端接口",
 )
 
-ensure_dirs(STATIC_DIR, UPLOAD_DIR, RESULT_DIR)
-logger.info('video finalize ready ffmpeg_exe=%s', imageio_ffmpeg.get_ffmpeg_exe())
+ensure_dirs(STATIC_DIR, UPLOAD_DIR, RESULT_DIR, AVATAR_DIR)
+logger.info("video finalize ready ffmpeg_exe=%s", imageio_ffmpeg.get_ffmpeg_exe())
 
 app.mount(settings.static_url_prefix, StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -81,7 +83,9 @@ async def request_context_middleware(request: Request, call_next):
 
 app.include_router(health_router, prefix=settings.api_prefix)
 app.include_router(model_router, prefix=settings.api_prefix)
+app.include_router(auth_router, prefix=settings.api_prefix)
+app.include_router(admin_router, prefix=settings.api_prefix)
+app.include_router(history_router, prefix=settings.api_prefix)
 app.include_router(segment_router, prefix=settings.api_prefix)
 
 register_exception_handlers(app)
-

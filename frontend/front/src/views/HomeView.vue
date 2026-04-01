@@ -17,7 +17,7 @@
             <li>上传自动驾驶场景图片并发起分割推理</li>
             <li>上传道路场景视频并展示实时 FPS 与分割可视化</li>
             <li>支持切换 DeepLabV3+ ResNet50 与 BiSeNetV2</li>
-            <li>预留 FastAPI 接口，支持后续平滑联调</li>
+            <li>已接入登录鉴权与用户隔离的推理历史记录</li>
           </ul>
 
           <el-button type="primary" @click="goSegment">进入图像分割页面</el-button>

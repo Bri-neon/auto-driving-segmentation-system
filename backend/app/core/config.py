@@ -16,6 +16,15 @@ class Settings:
     default_model_key: str = os.getenv("DEFAULT_MODEL_KEY", "bisenetv2")
     max_upload_size_mb: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "100"))
 
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "change-this-in-production")
+    jwt_expire_minutes: int = int(os.getenv("JWT_EXPIRE_MINUTES", "120"))
+
+    db_host: str = os.getenv("DB_HOST", "127.0.0.1")
+    db_port: int = int(os.getenv("DB_PORT", "3306"))
+    db_user: str = os.getenv("DB_USER", "root")
+    db_password: str = os.getenv("DB_PASSWORD", "123456")
+    db_name: str = os.getenv("DB_NAME", "segmentation_system")
+
     allowed_image_exts: tuple[str, ...] = (".jpg", ".jpeg", ".png")
     allowed_video_exts: tuple[str, ...] = (".mp4", ".avi", ".mov")
 
@@ -37,6 +46,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 STATIC_DIR = BASE_DIR / "static"
 UPLOAD_DIR = STATIC_DIR / "upload"
 RESULT_DIR = STATIC_DIR / "result"
+AVATAR_DIR = STATIC_DIR / "avatar"
 MODEL_DIR = BASE_DIR / "models"
 
 
