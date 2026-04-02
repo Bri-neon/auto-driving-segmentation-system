@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <PageContainer
     title="账号登录"
     description="登录后可访问受保护的分割接口、个人主页和推理历史；管理员可进入管理后台。"
@@ -15,7 +15,7 @@
                 <el-form-item label="密码" prop="password">
                   <el-input v-model="loginForm.password" type="password" show-password placeholder="请输入密码" />
                 </el-form-item>
-                <el-button type="primary" :loading="authStore.loading" @click="onLogin">
+                <el-button type="primary" :loading="authStore.loading" class="ripple-btn" @click="onLogin">
                   登录并进入系统
                 </el-button>
               </el-form>
@@ -35,7 +35,7 @@
                 <el-form-item label="昵称" prop="nickname">
                   <el-input v-model="registerForm.nickname" placeholder="可选" />
                 </el-form-item>
-                <el-button type="primary" :loading="registering" @click="onRegister">
+                <el-button type="primary" :loading="registering" class="ripple-btn" @click="onRegister">
                   创建账号
                 </el-button>
               </el-form>
@@ -177,6 +177,6 @@ const onRegister = async () => {
   margin: 0;
   padding-left: 20px;
   color: #415771;
-  line-height: 1.8;
+  line-height: 1.85;
 }
 </style>

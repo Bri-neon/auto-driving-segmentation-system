@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <PageContainer
     title="推理历史"
     description="展示当前登录用户的图像/视频推理记录，支持筛选、分页、详情查看和删除。"
@@ -18,7 +18,7 @@
           </el-select>
         </el-col>
         <el-col :xs="24" :md="8" :lg="6">
-          <el-button :loading="historyStore.loading" @click="onRefresh">刷新列表</el-button>
+          <el-button :loading="historyStore.loading" class="ripple-btn" @click="onRefresh">刷新列表</el-button>
         </el-col>
       </el-row>
     </el-card>
@@ -63,12 +63,13 @@
         <el-table-column label="操作" fixed="right" width="160">
           <template #default="{ row }">
             <el-space>
-              <el-button size="small" @click="openDetail(row.id)">详情</el-button>
+              <el-button size="small" class="ripple-btn" @click="openDetail(row.id)">详情</el-button>
               <el-button
                 size="small"
                 type="danger"
                 plain
                 :loading="historyStore.deletingIds.includes(row.id)"
+                class="ripple-btn"
                 @click="onDelete(row.id)"
               >
                 删除

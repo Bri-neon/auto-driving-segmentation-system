@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <PageContainer
     title="个人主页"
-    description="管理你的个人资料、头像和登录密码。所有修改实时写入后端账号系统。"
+    description="管理你的个人资料、头像和登录密码。所有修改会实时写入账号系统。"
   >
     <el-row :gutter="16" class="profile-row">
       <el-col :xs="24" :lg="14">
@@ -12,7 +12,9 @@
               <el-input :model-value="authStore.user?.username || ''" disabled />
             </el-form-item>
             <el-form-item label="角色">
-              <el-tag :type="authStore.isAdmin ? 'danger' : 'info'">{{ authStore.user?.role || 'user' }}</el-tag>
+              <el-tag :type="authStore.isAdmin ? 'danger' : 'info'">
+                {{ authStore.user?.role || 'user' }}
+              </el-tag>
             </el-form-item>
             <el-form-item label="邮箱">
               <el-input v-model="profileForm.email" placeholder="请输入邮箱（可留空）" />
@@ -21,7 +23,7 @@
               <el-input v-model="profileForm.nickname" placeholder="请输入昵称（可留空）" />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" :loading="savingProfile" @click="onSaveProfile">保存资料</el-button>
+              <el-button type="primary" :loading="savingProfile" class="ripple-btn" @click="onSaveProfile">保存资料</el-button>
             </el-form-item>
           </el-form>
         </el-card>
@@ -41,7 +43,7 @@
               <el-input v-model="passwordForm.confirm_password" type="password" show-password />
             </el-form-item>
             <el-form-item>
-              <el-button type="warning" :loading="changingPassword" @click="onChangePassword">修改密码</el-button>
+              <el-button type="warning" :loading="changingPassword" class="ripple-btn" @click="onChangePassword">修改密码</el-button>
             </el-form-item>
           </el-form>
         </el-card>
