@@ -45,6 +45,6 @@ const onChange = (value: ModelKey) => {
 
 .card-header {
   font-weight: 600;
-  color: #1d2c43;
+  color: var(--card-header-color);
 }
 </style>

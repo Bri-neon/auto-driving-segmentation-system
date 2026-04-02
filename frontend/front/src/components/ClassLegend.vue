@@ -35,7 +35,7 @@ defineProps<{
 
 .card-header {
   font-weight: 600;
-  color: #1d2c43;
+  color: var(--card-header-color);
 }
 
 .color-dot {
@@ -43,6 +43,6 @@ defineProps<{
   height: 18px;
   border-radius: 3px;
   display: inline-block;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--table-border-color);
 }
 </style>

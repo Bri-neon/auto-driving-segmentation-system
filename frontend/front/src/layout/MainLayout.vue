@@ -43,7 +43,7 @@ const isHome = computed(() => route.path === '/')
   height: 340px;
   right: -120px;
   top: -80px;
-  background: radial-gradient(circle, rgba(77, 163, 255, 0.42), transparent 65%);
+  background: radial-gradient(circle, var(--ambient-color-a), transparent 65%);
 }
 
 .ambient-b {
@@ -51,14 +51,15 @@ const isHome = computed(() => route.path === '/')
   height: 320px;
   left: -130px;
   bottom: 8vh;
-  background: radial-gradient(circle, rgba(255, 209, 102, 0.28), transparent 70%);
+  background: radial-gradient(circle, var(--ambient-color-b), transparent 70%);
 }
 
 .main-header {
   --el-header-padding: 0;
   height: 74px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.42);
-  background: rgba(255, 255, 255, 0.45);
+  border-bottom: 1px solid var(--main-header-border);
+  background: var(--main-header-bg);
+  box-shadow: var(--shadow-sm);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   position: sticky;
