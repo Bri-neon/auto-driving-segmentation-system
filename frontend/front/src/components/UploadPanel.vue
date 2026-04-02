@@ -96,7 +96,7 @@ const onResolutionChange = (resolution: string) => {
 
 .card-header {
   font-weight: 600;
-  color: #1d2c43;
+  color: var(--card-header-color);
 }
 
 .resolution-form {
@@ -110,13 +110,13 @@ const onResolutionChange = (resolution: string) => {
 .upload-title {
   margin: 0;
   font-size: 15px;
-  color: #21344d;
+  color: var(--color-text-deep);
 }
 
 .upload-tip {
   margin: 8px 0 0;
   font-size: 13px;
-  color: #738399;
+  color: var(--color-text-muted);
 }
 
 .actions {

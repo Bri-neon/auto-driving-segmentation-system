@@ -18,6 +18,15 @@
     </el-menu>
 
     <div class="auth-actions">
+      <el-tooltip :content="`切换主题（当前：${currentThemeLabel}，点击切换）`" placement="bottom">
+        <button type="button" class="theme-trigger" aria-label="切换主题" @click="onCycleTheme">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9.1 4.4 12 3l2.9 1.4 2.5-.4 1.9 2.2L18 8.6V20H6V8.6L4.7 6.2l1.9-2.2z" />
+            <path d="M9 6.5 12 9l3-2.5" />
+          </svg>
+        </button>
+      </el-tooltip>
+
       <template v-if="authStore.isAuthenticated">
         <el-upload
           class="avatar-uploader"
@@ -48,13 +57,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { type UploadFile, ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useAuthStore } from '../stores/auth'
 import { useSystemStore } from '../stores/system'
 import { resolveAssetUrl } from '../utils/format'
+import { type ThemeKey, THEME_OPTIONS, getActiveTheme, setTheme } from '../utils/theme'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,6 +73,30 @@ const authStore = useAuthStore()
 
 const activePath = computed(() => route.path)
 const avatarUrl = computed(() => resolveAssetUrl(authStore.user?.avatar_url || ''))
+
+const themeOptions = THEME_OPTIONS
+const currentTheme = ref<ThemeKey>(getActiveTheme())
+const currentThemeLabel = computed(() => themeOptions.find((item) => item.key === currentTheme.value)?.label || '主题')
+
+const applyTheme = (theme: ThemeKey) => {
+  if (theme === currentTheme.value) {
+    return
+  }
+
+  currentTheme.value = setTheme(theme)
+  const themeName = themeOptions.find((item) => item.key === theme)?.label || theme
+  ElMessage.success(`主题已切换为 ${themeName}`)
+}
+
+const onCycleTheme = () => {
+  const currentIndex = themeOptions.findIndex((item) => item.key === currentTheme.value)
+  const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % themeOptions.length
+  const nextTheme = themeOptions[nextIndex]?.key
+  if (!nextTheme) {
+    return
+  }
+  applyTheme(nextTheme)
+}
 
 const onSelect = (path: string) => {
   if (path !== route.path) {
@@ -104,6 +138,8 @@ const onAvatarSelect = async (file: UploadFile) => {
 }
 
 onMounted(() => {
+  currentTheme.value = getActiveTheme()
+
   if (authStore.isAuthenticated && !authStore.user) {
     authStore.refreshCurrentUser().catch(() => {
       authStore.logout()
@@ -134,7 +170,7 @@ onMounted(() => {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4da3ff, #ffd166);
+  background: linear-gradient(135deg, var(--color-accent-blue), var(--color-accent-yellow));
   box-shadow: 0 0 14px rgba(77, 163, 255, 0.45);
 }
 
@@ -147,13 +183,13 @@ onMounted(() => {
 .brand-text strong {
   font-size: 18px;
   line-height: 1.1;
-  color: #0e2238;
+  color: var(--nav-title-color);
 }
 
 .brand-text span {
   margin-top: 4px;
   font-size: 12px;
-  color: #58708c;
+  color: var(--nav-subtitle-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -172,13 +208,13 @@ onMounted(() => {
 
 .menu :deep(.el-menu-item) {
   border-bottom: none !important;
-  color: #2a4461;
+  color: var(--nav-link-color);
 }
 
 .menu :deep(.el-menu-item.is-active) {
-  color: #1677d2;
+  color: var(--nav-link-active-color);
   font-weight: 600;
-  background: rgba(77, 163, 255, 0.1);
+  background: var(--nav-link-active-bg);
   border-radius: 10px;
 }
 
@@ -186,6 +222,31 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.theme-trigger {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--theme-trigger-border);
+  border-radius: 11px;
+  background: var(--theme-trigger-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.theme-trigger:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-accent-blue);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--color-accent-blue) 35%, transparent);
+}
+
+.theme-trigger svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--theme-trigger-icon);
 }
 
 .avatar-uploader {
@@ -199,7 +260,7 @@ onMounted(() => {
 .user-name {
   max-width: 180px;
   font-size: 13px;
-  color: #2d4867;
+  color: var(--nav-user-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -208,7 +269,7 @@ onMounted(() => {
 .user-name em {
   margin-left: 6px;
   font-style: normal;
-  color: #0f6bb5;
+  color: var(--nav-admin-color);
   font-weight: 600;
 }
 

@@ -8,6 +8,9 @@ import router from './router'
 import { useAuthStore } from './stores/auth'
 import './style.css'
 import { AUTH_UNAUTHORIZED_EVENT } from './utils/auth'
+import { initTheme } from './utils/theme'
+
+initTheme()
 
 const app = createApp(App)
 const pinia = createPinia()

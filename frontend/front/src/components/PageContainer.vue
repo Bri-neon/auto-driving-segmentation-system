@@ -25,23 +25,23 @@ defineProps<{
 .page-header {
   padding: 20px 22px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.48);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: var(--page-header-bg);
+  border: 1px solid var(--page-header-border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 8px 26px rgba(20, 60, 120, 0.09);
+  box-shadow: var(--shadow-sm);
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 30px;
   letter-spacing: -0.02em;
-  color: #0e2238;
+  color: var(--page-title-color);
 }
 
 .page-header p {
   margin: 8px 0 0;
-  color: #4f6783;
+  color: var(--page-desc-color);
   max-width: 920px;
   line-height: 1.7;
 }

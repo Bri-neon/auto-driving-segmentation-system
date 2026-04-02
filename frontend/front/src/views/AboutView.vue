@@ -63,14 +63,14 @@ import PageContainer from '../components/PageContainer.vue'
 
 .about-card p {
   margin: 0;
-  color: #4f627c;
+  color: var(--page-desc-color);
   line-height: 1.8;
 }
 
 .about-card ul {
   margin: 0;
   padding-left: 20px;
-  color: #334861;
+  color: var(--page-desc-color);
   line-height: 1.9;
 }
 

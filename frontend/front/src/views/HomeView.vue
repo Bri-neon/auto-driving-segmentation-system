@@ -264,33 +264,33 @@ onBeforeUnmount(() => {
   margin: 0 auto;
   padding: 26px;
   border-radius: 26px;
-  background: rgba(234, 244, 255, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.62);
+  background: color-mix(in srgb, var(--page-header-bg) 90%, transparent);
+  border: 1px solid var(--page-header-border);
   backdrop-filter: blur(12px);
-  box-shadow: 0 20px 56px rgba(20, 60, 120, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .section-title {
   margin: 0 0 18px;
-  color: #0e2238;
+  color: var(--page-title-color);
   font-size: 30px;
   text-align: center;
 }
 
 .feature-card h3 {
   margin: 0 0 10px;
-  color: #17385a;
+  color: var(--color-text-deep);
 }
 
 .feature-card p {
   margin: 0;
-  color: #4c6786;
+  color: var(--color-text-muted);
   line-height: 1.75;
 }
 
 .dialog-text {
   margin: 0;
-  color: #415d7c;
+  color: var(--page-desc-color);
   line-height: 1.8;
 }
 

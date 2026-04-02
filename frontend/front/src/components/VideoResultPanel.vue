@@ -284,7 +284,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   font-weight: 600;
-  color: #1d2c43;
+  color: var(--card-header-color);
 }
 
 .progress-wrap {
@@ -294,20 +294,20 @@ onBeforeUnmount(() => {
 .progress-text {
   margin: 6px 0 0;
   font-size: 12px;
-  color: #546982;
+  color: var(--color-text-muted);
 }
 
 .video-wrap {
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--table-border-color);
   border-radius: 8px;
   padding: 10px;
-  background: #f5f8fc;
+  background: var(--input-surface);
   min-height: 260px;
 }
 
 .video-wrap p {
   margin: 0 0 8px;
-  color: #40536b;
+  color: var(--color-text-deep);
   font-size: 14px;
 }
 
@@ -326,14 +326,14 @@ onBeforeUnmount(() => {
 .finalize-loading {
   min-height: 210px;
   border-radius: 8px;
-  background: #eef3fb;
-  border: 1px dashed #b8c5d9;
+  background: var(--upload-dragger-bg);
+  border: 1px dashed var(--upload-dragger-border);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: #445974;
+  color: var(--color-text-muted);
 }
 
 .loading-icon {
