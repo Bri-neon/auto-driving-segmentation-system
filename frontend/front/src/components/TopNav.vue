@@ -1,8 +1,11 @@
-<template>
+﻿<template>
   <nav class="top-nav">
-    <div class="brand">
-      <strong>{{ systemStore.title }}</strong>
-      <span>{{ systemStore.subtitle }}</span>
+    <div class="brand" @click="goHome">
+      <div class="brand-dot" />
+      <div class="brand-text">
+        <strong>{{ systemStore.title }}</strong>
+        <span>{{ systemStore.subtitle }}</span>
+      </div>
     </div>
 
     <el-menu class="menu" mode="horizontal" :default-active="activePath" @select="onSelect">
@@ -23,16 +26,18 @@
           :accept="'image/png,image/jpg,image/jpeg'"
           :on-change="onAvatarSelect"
         >
-          <el-tooltip content="点击上传头像（JPG/PNG）" placement="bottom">
-            <el-avatar :size="36" :src="avatarUrl">
+          <el-tooltip content="点击上传头像（JPG / PNG）" placement="bottom">
+            <el-avatar :size="38" :src="avatarUrl" class="user-avatar">
               {{ authStore.displayName.slice(0, 1).toUpperCase() || 'U' }}
             </el-avatar>
           </el-tooltip>
         </el-upload>
+
         <span class="user-name">
           {{ authStore.displayName || '用户' }}
           <em v-if="authStore.isAdmin">管理员</em>
         </span>
+
         <el-button text type="danger" @click="onLogout">退出登录</el-button>
       </template>
       <template v-else>
@@ -62,6 +67,12 @@ const avatarUrl = computed(() => resolveAssetUrl(authStore.user?.avatar_url || '
 const onSelect = (path: string) => {
   if (path !== route.path) {
     void router.push(path)
+  }
+}
+
+const goHome = () => {
+  if (route.path !== '/') {
+    void router.push('/')
   }
 }
 
@@ -103,56 +114,92 @@ onMounted(() => {
 
 <style scoped>
 .top-nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 18px;
   height: 100%;
   padding: 0 24px;
-  gap: 20px;
 }
 
 .brand {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.brand-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4da3ff, #ffd166);
+  box-shadow: 0 0 14px rgba(77, 163, 255, 0.45);
+}
+
+.brand-text {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 0;
 }
 
-.brand strong {
+.brand-text strong {
   font-size: 18px;
-  color: #152033;
   line-height: 1.1;
+  color: #0e2238;
 }
 
-.brand span {
+.brand-text span {
+  margin-top: 4px;
   font-size: 12px;
-  color: #65758b;
+  color: #58708c;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .menu {
-  flex: 1;
   min-width: 0;
   border-bottom: none;
+  background: transparent;
+}
+
+.menu :deep(.el-menu--horizontal) {
+  background: transparent;
+  border-bottom: none;
+}
+
+.menu :deep(.el-menu-item) {
+  border-bottom: none !important;
+  color: #2a4461;
+}
+
+.menu :deep(.el-menu-item.is-active) {
+  color: #1677d2;
+  font-weight: 600;
+  background: rgba(77, 163, 255, 0.1);
+  border-radius: 10px;
 }
 
 .auth-actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
 }
 
 .avatar-uploader {
   display: inline-flex;
 }
 
+.user-avatar {
+  box-shadow: 0 8px 18px rgba(77, 163, 255, 0.2);
+}
+
 .user-name {
+  max-width: 180px;
   font-size: 13px;
-  color: #314860;
-  max-width: 160px;
+  color: #2d4867;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -160,30 +207,21 @@ onMounted(() => {
 
 .user-name em {
   margin-left: 6px;
-  color: #0f6bb5;
   font-style: normal;
+  color: #0f6bb5;
+  font-weight: 600;
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1240px) {
   .top-nav {
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: center;
+    grid-template-columns: 1fr;
+    height: auto;
     padding-top: 8px;
     padding-bottom: 8px;
-    height: auto;
-  }
-
-  .menu {
-    width: 100%;
   }
 
   .auth-actions {
     justify-content: flex-end;
-  }
-
-  .brand span {
-    white-space: normal;
   }
 }
 </style>

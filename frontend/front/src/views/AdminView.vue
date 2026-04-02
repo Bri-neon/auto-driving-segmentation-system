@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <PageContainer
     title="管理后台"
     description="管理员可在此管理用户与全站推理历史，支持审核与风险内容处理。"
@@ -15,7 +15,7 @@
         <el-card shadow="never" class="filter-card">
           <el-row :gutter="12">
             <el-col :xs="24" :md="8" :lg="6">
-              <el-input v-model="adminStore.userKeyword" placeholder="用户名/邮箱/昵称关键字" clearable />
+              <el-input v-model="adminStore.userKeyword" placeholder="用户名 / 邮箱 / 昵称关键词" clearable />
             </el-col>
             <el-col :xs="24" :md="8" :lg="4">
               <el-select v-model="adminStore.userRole" placeholder="角色" clearable>
@@ -30,7 +30,9 @@
               </el-select>
             </el-col>
             <el-col :xs="24" :md="24" :lg="6">
-              <el-button type="primary" :loading="adminStore.usersLoading" @click="onUserFilter">查询用户</el-button>
+              <el-button type="primary" :loading="adminStore.usersLoading" class="ripple-btn" @click="onUserFilter">
+                查询用户
+              </el-button>
             </el-col>
           </el-row>
         </el-card>
@@ -66,8 +68,10 @@
             <el-table-column label="操作" fixed="right" width="190">
               <template #default="{ row }">
                 <el-space>
-                  <el-button size="small" @click="openUserEdit(row)">编辑</el-button>
-                  <el-button size="small" type="warning" plain @click="openResetPassword(row.id)">重置密码</el-button>
+                  <el-button size="small" class="ripple-btn" @click="openUserEdit(row)">编辑</el-button>
+                  <el-button size="small" type="warning" plain class="ripple-btn" @click="openResetPassword(row.id)">
+                    重置密码
+                  </el-button>
                 </el-space>
               </template>
             </el-table-column>
@@ -92,7 +96,7 @@
         <el-card shadow="never" class="filter-card">
           <el-row :gutter="12">
             <el-col :xs="24" :md="8" :lg="5">
-              <el-input v-model="adminStore.historyUsername" placeholder="用户名关键字" clearable />
+              <el-input v-model="adminStore.historyUsername" placeholder="用户名关键词" clearable />
             </el-col>
             <el-col :xs="24" :md="8" :lg="4">
               <el-input-number v-model="adminStore.historyUserId" :min="1" :precision="0" style="width: 100%" />
@@ -110,10 +114,12 @@
               </el-select>
             </el-col>
             <el-col :xs="24" :md="8" :lg="4">
-              <el-button type="primary" :loading="adminStore.historiesLoading" @click="onHistoryFilter">查询历史</el-button>
+              <el-button type="primary" :loading="adminStore.historiesLoading" class="ripple-btn" @click="onHistoryFilter">
+                查询历史
+              </el-button>
             </el-col>
           </el-row>
-          <p class="filter-tip">用户 ID 不筛选时请置空（当前可删除该值）。</p>
+          <p class="filter-tip">用户 ID 不筛选时请置空（可删除输入值）。</p>
         </el-card>
 
         <el-card shadow="never" class="table-card">
@@ -139,8 +145,8 @@
             <el-table-column label="操作" fixed="right" width="170">
               <template #default="{ row }">
                 <el-space>
-                  <el-button size="small" @click="openHistoryEdit(row.id)">编辑</el-button>
-                  <el-button size="small" type="danger" plain @click="onDeleteHistory(row.id)">删除</el-button>
+                  <el-button size="small" class="ripple-btn" @click="openHistoryEdit(row.id)">编辑</el-button>
+                  <el-button size="small" type="danger" plain class="ripple-btn" @click="onDeleteHistory(row.id)">删除</el-button>
                 </el-space>
               </template>
             </el-table-column>
@@ -181,8 +187,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="userEditVisible = false">取消</el-button>
-        <el-button type="primary" :loading="userSubmitting" @click="submitUserEdit">保存</el-button>
+        <el-button class="ripple-btn" @click="userEditVisible = false">取消</el-button>
+        <el-button type="primary" :loading="userSubmitting" class="ripple-btn" @click="submitUserEdit">保存</el-button>
       </template>
     </el-dialog>
 
@@ -193,8 +199,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="resetPwdVisible = false">取消</el-button>
-        <el-button type="warning" :loading="resetSubmitting" @click="submitResetPassword">确认重置</el-button>
+        <el-button class="ripple-btn" @click="resetPwdVisible = false">取消</el-button>
+        <el-button type="warning" :loading="resetSubmitting" class="ripple-btn" @click="submitResetPassword">确认重置</el-button>
       </template>
     </el-dialog>
 
@@ -217,8 +223,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="historyEditVisible = false">取消</el-button>
-        <el-button type="primary" :loading="historySubmitting" @click="submitHistoryEdit">保存</el-button>
+        <el-button class="ripple-btn" @click="historyEditVisible = false">取消</el-button>
+        <el-button type="primary" :loading="historySubmitting" class="ripple-btn" @click="submitHistoryEdit">保存</el-button>
       </template>
     </el-dialog>
   </PageContainer>
