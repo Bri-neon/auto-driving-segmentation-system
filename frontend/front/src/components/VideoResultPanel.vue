@@ -2,7 +2,14 @@
   <el-card shadow="never" class="video-card">
     <template #header>
       <div class="header-row">
-        <span>视频实时展示</span>
+        <div class="header-left">
+          <span>视频实时展示</span>
+          <el-tooltip content="放大查看" placement="top">
+            <el-button text class="zoom-trigger ripple-btn" @click="zoomVisible = true">
+              <el-icon><FullScreen /></el-icon>
+            </el-button>
+          </el-tooltip>
+        </div>
         <el-space>
           <el-tag :type="statusTagType" effect="light">实时: {{ statusText }}</el-tag>
           <el-tag :type="finalizeTagType" effect="light">最终视频: {{ finalizeText }}</el-tag>
@@ -55,11 +62,72 @@
       </el-col>
     </el-row>
   </el-card>
+
+  <el-dialog v-model="zoomVisible" width="92%" top="9vh" class="video-zoom-dialog" destroy-on-close>
+    <template #header>
+      <div class="zoom-header">
+        <h3>视频放大预览</h3>
+        <el-space>
+          <el-tag :type="statusTagType" effect="light">实时: {{ statusText }}</el-tag>
+          <el-tag :type="finalizeTagType" effect="light">最终视频: {{ finalizeText }}</el-tag>
+          <el-tag type="success" effect="light">FPS: {{ realtimeFpsText }}</el-tag>
+        </el-space>
+      </div>
+    </template>
+
+    <div class="zoom-grid">
+      <section class="zoom-pane">
+        <div class="zoom-pane-title">原始视频</div>
+        <video
+          v-if="originalVideoUrl"
+          ref="originalVideoZoomRef"
+          :src="originalVideoUrl"
+          controls
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="auto"
+          class="zoom-video"
+        />
+        <el-empty v-else description="请先上传视频" :image-size="86" />
+      </section>
+
+      <section class="zoom-pane segmented-pane">
+        <div class="zoom-pane-title">分割融合视频</div>
+        <div class="zoom-metrics" v-if="modelNameText || resolutionTextDisplay || realtimeFpsText">
+          <span>FPS {{ realtimeFpsText }}</span>
+          <span>{{ modelNameText }}</span>
+          <span>{{ resolutionTextDisplay }}</span>
+        </div>
+
+        <video
+          v-if="finalizeStatus === 'completed' && overlayVideoUrl"
+          ref="overlayVideoZoomRef"
+          :key="overlayVideoUrl"
+          :src="overlayVideoUrl"
+          controls
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="auto"
+          class="zoom-video"
+        />
+        <div v-else-if="isFinalizing" class="finalize-loading zoom-loading">
+          <el-icon class="loading-icon"><Loading /></el-icon>
+          <p>最终视频正在生成中，请稍候...</p>
+        </div>
+        <img v-else-if="displayPreviewImage" :src="displayPreviewImage" class="preview-image zoom-preview" alt="实时预览帧" />
+        <el-empty v-else description="暂无分割视频" :image-size="86" />
+      </section>
+    </div>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { Loading } from '@element-plus/icons-vue'
+import { FullScreen, Loading } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   originalVideoUrl: string
@@ -71,9 +139,15 @@ const props = defineProps<{
   previewImage: string
   taskStatus: 'idle' | 'queued' | 'running' | 'completed' | 'failed'
   finalizeStatus: 'idle' | 'queued' | 'running' | 'completed' | 'failed'
+  modelName?: string
+  resolutionText?: string
 }>()
 
 const overlayVideoRef = ref<HTMLVideoElement | null>(null)
+const originalVideoZoomRef = ref<HTMLVideoElement | null>(null)
+const overlayVideoZoomRef = ref<HTMLVideoElement | null>(null)
+const zoomVisible = ref(false)
+
 const displayPreviewImage = ref('')
 const pendingPreviewImage = ref('')
 const renderTimer = ref<ReturnType<typeof setTimeout> | null>(null)
@@ -88,6 +162,8 @@ const lastIncomingAt = ref(0)
 
 const realtimeFpsText = computed(() => (props.realtimeFps === null ? '--' : props.realtimeFps.toFixed(1)))
 const isFinalizing = computed(() => props.finalizeStatus === 'queued' || props.finalizeStatus === 'running')
+const modelNameText = computed(() => props.modelName || '模型待获取')
+const resolutionTextDisplay = computed(() => props.resolutionText || '分辨率待获取')
 
 const statusText = computed(() => {
   if (props.taskStatus === 'queued') return '排队中'
@@ -225,19 +301,33 @@ const resetPreviewPipeline = () => {
   lastIncomingAt.value = 0
 }
 
+const tryAutoplay = async (videoEl: HTMLVideoElement | null) => {
+  if (!videoEl) return
+  videoEl.load()
+  try {
+    await videoEl.play()
+  } catch {
+    // autoplay might be blocked by browser policy; controls are still available.
+  }
+}
+
 watch(
   () => props.overlayVideoUrl,
   async (url) => {
     if (!url) return
     await nextTick()
-    const video = overlayVideoRef.value
-    if (!video) return
-    video.load()
-    try {
-      await video.play()
-    } catch {
-      // autoplay might be blocked by browser policy; controls are still available.
-    }
+    await tryAutoplay(overlayVideoRef.value)
+    await tryAutoplay(overlayVideoZoomRef.value)
+  },
+)
+
+watch(
+  () => zoomVisible.value,
+  async (visible) => {
+    if (!visible) return
+    await nextTick()
+    await tryAutoplay(originalVideoZoomRef.value)
+    await tryAutoplay(overlayVideoZoomRef.value)
   },
 )
 
@@ -285,6 +375,25 @@ onBeforeUnmount(() => {
   gap: 12px;
   font-weight: 600;
   color: var(--card-header-color);
+}
+
+.header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoom-trigger {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid var(--glass-border);
+  background: color-mix(in srgb, var(--glass-bg-panel) 70%, transparent);
+}
+
+.zoom-trigger :deep(.el-icon) {
+  font-size: 16px;
+  color: var(--color-accent-blue);
 }
 
 .progress-wrap {
@@ -339,6 +448,105 @@ onBeforeUnmount(() => {
 .loading-icon {
   font-size: 28px;
   animation: spin 1s linear infinite;
+}
+
+.zoom-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.zoom-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--color-text-deep);
+}
+
+.zoom-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.zoom-pane {
+  position: relative;
+  border-radius: 14px;
+  border: 1px solid var(--table-border-color);
+  background: color-mix(in srgb, var(--input-surface) 88%, transparent);
+  padding: 12px;
+  min-height: 72vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.zoom-pane-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-deep);
+}
+
+.zoom-video,
+.zoom-preview {
+  width: 100%;
+  height: calc(72vh - 56px);
+  border-radius: 10px;
+  background: #0f1724;
+  object-fit: contain;
+}
+
+.segmented-pane {
+  overflow: hidden;
+}
+
+.zoom-metrics {
+  position: absolute;
+  top: 44px;
+  left: 20px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.zoom-metrics span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border-strong);
+  background: color-mix(in srgb, var(--main-header-bg) 86%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--color-text-deep);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.zoom-loading {
+  flex: 1;
+  min-height: calc(72vh - 56px);
+}
+
+:deep(.video-zoom-dialog .el-dialog__body) {
+  padding-top: 8px;
+}
+
+@media (max-width: 1200px) {
+  .zoom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .zoom-pane {
+    min-height: 52vh;
+  }
+
+  .zoom-video,
+  .zoom-preview,
+  .zoom-loading {
+    height: calc(52vh - 56px);
+    min-height: calc(52vh - 56px);
+  }
 }
 
 @keyframes spin {
