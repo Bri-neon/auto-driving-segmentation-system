@@ -4,6 +4,7 @@ import os
 import time
 from collections import deque
 from http import HTTPStatus
+from numbers import Integral
 from pathlib import Path
 from threading import Lock
 
@@ -165,6 +166,35 @@ class InferenceService:
         self._session_manager = ONNXSessionManager()
 
     @staticmethod
+    def _normalize_requested_input_size(
+        session: ort.InferenceSession,
+        requested_size: tuple[int, int],
+    ) -> tuple[int, int]:
+        normalized_h, normalized_w = int(requested_size[0]), int(requested_size[1])
+        input_shape = session.get_inputs()[0].shape
+
+        if len(input_shape) >= 4:
+            h_dim = input_shape[2]
+            w_dim = input_shape[3]
+
+            if isinstance(h_dim, Integral) and int(h_dim) > 0:
+                normalized_h = int(h_dim)
+            if isinstance(w_dim, Integral) and int(w_dim) > 0:
+                normalized_w = int(w_dim)
+
+        return normalized_h, normalized_w
+
+    @staticmethod
+    def _restore_mask_to_size(
+        mask_input: np.ndarray,
+        target_size: tuple[int, int],
+    ) -> np.ndarray:
+        target_h, target_w = int(target_size[0]), int(target_size[1])
+        if mask_input.shape[0] == target_h and mask_input.shape[1] == target_w:
+            return mask_input
+        return cv2.resize(mask_input, (target_w, target_h), interpolation=cv2.INTER_NEAREST)
+
+    @staticmethod
     def _preprocess(frame_bgr: np.ndarray, input_size: tuple[int, int]) -> np.ndarray:
         input_h, input_w = input_size
         img = cv2.resize(frame_bgr, (input_w, input_h), interpolation=cv2.INTER_LINEAR)
@@ -248,18 +278,20 @@ class InferenceService:
             raise AppException("读取图片失败", status_code=HTTPStatus.BAD_REQUEST)
 
         session, input_name = self._session_manager.get(model)
-        effective_input_size = input_size or model.input_size
+        requested_input_size = input_size or model.input_size
+        effective_input_size = self._normalize_requested_input_size(
+            session, requested_input_size
+        )
 
         input_tensor = self._preprocess(frame, effective_input_size)
         mask, inference_time = self._infer_mask(
             session, input_name, input_tensor, effective_input_size
         )
+        original_size = (frame.shape[0], frame.shape[1])
+        restored_mask = self._restore_mask_to_size(mask, original_size)
 
-        color_mask = self._mask_to_color(mask)
-
-        input_h, input_w = effective_input_size
-        resized_frame = cv2.resize(frame, (input_w, input_h), interpolation=cv2.INTER_LINEAR)
-        overlay = cv2.addWeighted(resized_frame, 0.6, color_mask, 0.4, 0)
+        color_mask = self._mask_to_color(restored_mask)
+        overlay = cv2.addWeighted(frame, 0.6, color_mask, 0.4, 0)
 
         segmented_path = RESULT_DIR / segmented_filename
         overlay_path = RESULT_DIR / overlay_filename
@@ -268,7 +300,7 @@ class InferenceService:
         if not cv2.imwrite(str(overlay_path), overlay):
             raise AppException("写入融合结果图片失败", status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
 
-        classes = self._mask_to_classes(mask)
+        classes = self._mask_to_classes(restored_mask)
 
         return SegmentImageData(
             original_image_url=original_image_url,
@@ -290,7 +322,10 @@ class InferenceService:
         input_size: tuple[int, int] | None = None,
     ) -> SegmentVideoData:
         session, input_name = self._session_manager.get(model)
-        effective_input_size = input_size or model.input_size
+        requested_input_size = input_size or model.input_size
+        effective_input_size = self._normalize_requested_input_size(
+            session, requested_input_size
+        )
 
         capture = cv2.VideoCapture(str(original_video_path))
         if not capture.isOpened():
@@ -341,10 +376,9 @@ class InferenceService:
                 inference_times.append(inference_time)
 
                 color_mask_input = self._mask_to_color(mask)
-                color_mask = cv2.resize(
+                color_mask = self._restore_mask_to_size(
                     color_mask_input,
-                    (width, height),
-                    interpolation=cv2.INTER_NEAREST,
+                    (height, width),
                 )
                 overlay = cv2.addWeighted(frame, 0.6, color_mask, 0.4, 0)
 

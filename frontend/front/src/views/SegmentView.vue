@@ -63,7 +63,7 @@
           </el-col>
         </el-row>
 
-        <ClassLegend :classes="imageClasses" />
+        <ClassLegend class="legend-spacing" :classes="imageClasses" />
       </el-tab-pane>
 
       <el-tab-pane label="视频分割" name="video">
@@ -93,6 +93,8 @@
               :preview-image="videoPreviewImage"
               :task-status="segmentStore.videoRealtimeStatus"
               :finalize-status="segmentStore.videoFinalizeStatus"
+              :model-name="videoPanelModelName"
+              :resolution-text="videoPanelResolutionText"
             />
           </el-col>
         </el-row>
@@ -158,6 +160,33 @@ const videoPreviewImage = computed(() => {
     return ''
   }
   return `data:image/jpeg;base64,${segmentStore.videoPreviewBase64}`
+})
+
+const videoPanelModelName = computed(() => {
+  return (
+    segmentStore.videoResult?.model_name ||
+    segmentStore.videoSummary?.model_name ||
+    segmentStore.videoRuntimeModelName ||
+    systemStore.modelInfo?.model_name ||
+    ''
+  )
+})
+
+const videoPanelResolutionText = computed(() => {
+  const size =
+    segmentStore.videoResult?.input_size ||
+    segmentStore.videoSummary?.input_size ||
+    segmentStore.videoRuntimeInputSize
+
+  if (size) {
+    return `${size[0]} x ${size[1]}`
+  }
+
+  if (segmentStore.selectedVideoResolution) {
+    return segmentStore.selectedVideoResolution.replace('x', ' x ')
+  }
+
+  return ''
 })
 
 const activeResultModelName = computed(() => {
@@ -582,5 +611,9 @@ onBeforeUnmount(() => {
 
 .mode-tabs {
   margin-top: 6px;
+}
+
+.legend-spacing {
+  margin-top: 14px;
 }
 </style>

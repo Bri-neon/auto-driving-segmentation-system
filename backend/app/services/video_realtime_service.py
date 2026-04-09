@@ -185,6 +185,17 @@ class VideoRealtimeService:
         self._safe_update_history(task_id, realtime_status="running", status_message=None)
 
         try:
+            session, input_name = inference_service._session_manager.get(task.model)
+            effective_input_size = inference_service._normalize_requested_input_size(
+                session, task.input_size
+            )
+            if effective_input_size != task.input_size:
+                task = self._update_task(task_id, input_size=effective_input_size) or task
+                self._safe_update_history(
+                    task_id,
+                    resolution=f"{effective_input_size[0]}x{effective_input_size[1]}",
+                )
+
             self._broadcast_threadsafe(
                 loop,
                 task_id,
@@ -193,13 +204,11 @@ class VideoRealtimeService:
                     "task_id": task_id,
                     "status": task.status,
                     "model_name": task.model.model_name,
-                    "input_size": [task.input_size[0], task.input_size[1]],
+                    "input_size": [effective_input_size[0], effective_input_size[1]],
                     "original_video_url": task.original_video_url,
                     "finalize_status": task.finalize_status,
                 },
             )
-
-            session, input_name = inference_service._session_manager.get(task.model)
 
             capture = cv2.VideoCapture(str(task.original_video_path))
             if not capture.isOpened():
@@ -232,18 +241,17 @@ class VideoRealtimeService:
                     frame_count += 1
                     frame_start = time.perf_counter()
 
-                    input_tensor = inference_service._preprocess(frame, task.input_size)
+                    input_tensor = inference_service._preprocess(frame, effective_input_size)
                     mask, inference_time = inference_service._infer_mask(
-                        session, input_name, input_tensor, task.input_size
+                        session, input_name, input_tensor, effective_input_size
                     )
                     inference_times.append(inference_time)
 
-                    color_mask_input = inference_service._mask_to_color(mask)
-                    color_mask = cv2.resize(
-                        color_mask_input,
-                        (width, height),
-                        interpolation=cv2.INTER_NEAREST,
+                    restored_mask = inference_service._restore_mask_to_size(
+                        mask,
+                        (height, width),
                     )
+                    color_mask = inference_service._mask_to_color(restored_mask)
                     overlay = cv2.addWeighted(frame, 0.6, color_mask, 0.4, 0)
 
                     frame_elapsed = time.perf_counter() - frame_start
