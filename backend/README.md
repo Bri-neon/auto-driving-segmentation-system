@@ -120,6 +120,7 @@ backend/
 - `DEFAULT_MODEL_KEY`：覆盖默认模型
 - `MAX_UPLOAD_SIZE_MB`：覆盖上传大小限制
 - `CUDA_BIN_PATH`：可选，指定 CUDA `bin` 目录用于 DLL 搜索
+- `VIDEO_POSTPROCESS_MODE`：实时视频后处理模式，支持 `realtime_fast`（默认）或 `quality`
 
 ---
 

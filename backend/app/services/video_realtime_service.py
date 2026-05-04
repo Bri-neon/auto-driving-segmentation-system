@@ -13,6 +13,7 @@ from typing import Any
 
 import cv2
 
+from app.core.config import settings
 from app.core.exceptions import AppException
 from app.core.logger import logger
 from app.schemas.segment import SegmentVideoData, SegmentVideoRealtimeSummaryData
@@ -185,6 +186,7 @@ class VideoRealtimeService:
         self._safe_update_history(task_id, realtime_status="running", status_message=None)
 
         try:
+            postprocess_mode = settings.video_postprocess_mode
             session, input_name = inference_service._session_manager.get(task.model)
             effective_input_size = inference_service._normalize_requested_input_size(
                 session, task.input_size
@@ -195,6 +197,14 @@ class VideoRealtimeService:
                     task_id,
                     resolution=f"{effective_input_size[0]}x{effective_input_size[1]}",
                 )
+
+            logger.info(
+                "realtime task started task_id=%s model=%s input_size=%s postprocess_mode=%s",
+                task_id,
+                task.model.model_key,
+                effective_input_size,
+                postprocess_mode,
+            )
 
             self._broadcast_threadsafe(
                 loop,
@@ -247,11 +257,11 @@ class VideoRealtimeService:
                     )
                     inference_times.append(inference_time)
 
-                    restored_mask = inference_service._restore_mask_to_size(
-                        mask,
-                        (height, width),
+                    color_mask = inference_service._build_display_color_mask(
+                        mask=mask,
+                        target_size=(height, width),
+                        mode=postprocess_mode,
                     )
-                    color_mask = inference_service._mask_to_color(restored_mask)
                     overlay = cv2.addWeighted(frame, 0.6, color_mask, 0.4, 0)
 
                     frame_elapsed = time.perf_counter() - frame_start
