@@ -18,6 +18,7 @@ class Settings:
 
     jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "change-this-in-production")
     jwt_expire_minutes: int = int(os.getenv("JWT_EXPIRE_MINUTES", "120"))
+    video_postprocess_mode: str = os.getenv("VIDEO_POSTPROCESS_MODE", "realtime_fast")
 
     db_host: str = os.getenv("DB_HOST", "127.0.0.1")
     db_port: int = int(os.getenv("DB_PORT", "3306"))
@@ -52,6 +53,10 @@ MODEL_DIR = BASE_DIR / "models"
 
 def get_settings() -> Settings:
     settings = Settings()
+    normalized_mode = str(settings.video_postprocess_mode).strip().lower()
+    if normalized_mode not in {"realtime_fast", "quality"}:
+        normalized_mode = "realtime_fast"
+    object.__setattr__(settings, "video_postprocess_mode", normalized_mode)
     object.__setattr__(
         settings,
         "cors_origins",

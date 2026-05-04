@@ -236,6 +236,20 @@ class InferenceService:
         return cv2.cvtColor(color_rgb, cv2.COLOR_RGB2BGR)
 
     @staticmethod
+    def _build_display_color_mask(
+        mask: np.ndarray,
+        target_size: tuple[int, int],
+        mode: str,
+    ) -> np.ndarray:
+        normalized_mode = str(mode).strip().lower()
+        if normalized_mode == "quality":
+            restored_mask = InferenceService._restore_mask_to_size(mask, target_size)
+            return InferenceService._mask_to_color(restored_mask)
+
+        color_mask_input = InferenceService._mask_to_color(mask)
+        return InferenceService._restore_mask_to_size(color_mask_input, target_size)
+
+    @staticmethod
     def _mask_to_classes(mask: np.ndarray) -> list[SegmentClassItem]:
         total_pixels = mask.size
         if total_pixels <= 0:
@@ -359,6 +373,7 @@ class InferenceService:
         fps_window: deque[float] = deque(maxlen=30)
         realtime_fps = 0.0
         total_start = time.perf_counter()
+        postprocess_mode = "quality"
 
         try:
             while True:
@@ -375,10 +390,10 @@ class InferenceService:
                 )
                 inference_times.append(inference_time)
 
-                color_mask_input = self._mask_to_color(mask)
-                color_mask = self._restore_mask_to_size(
-                    color_mask_input,
-                    (height, width),
+                color_mask = self._build_display_color_mask(
+                    mask=mask,
+                    target_size=(height, width),
+                    mode=postprocess_mode,
                 )
                 overlay = cv2.addWeighted(frame, 0.6, color_mask, 0.4, 0)
 
@@ -421,10 +436,11 @@ class InferenceService:
         )
 
         logger.info(
-            "sync video finalized segmented=%s overlay=%s input_size=%s",
+            "sync video finalized segmented=%s overlay=%s input_size=%s postprocess_mode=%s",
             segmented_meta,
             overlay_meta,
             effective_input_size,
+            postprocess_mode,
         )
 
         return SegmentVideoData(
