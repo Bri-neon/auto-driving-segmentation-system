@@ -4,7 +4,7 @@
     description="支持图像与视频的自动驾驶场景语义分割展示，可切换 DeepLabV3+ ResNet50 与 BiSeNetV2 模型。"
   >
     <el-alert
-      title="视频分割已升级为二阶段：实时预览完成后将自动生成最终视频。"
+      title="视频分割全新升级！实时预览完成后将自动生成最终视频！"
       type="success"
       :closable="false"
       show-icon
